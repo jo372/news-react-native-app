@@ -9,20 +9,20 @@ enum Endpoints {
 
 // the possible lanugage options for the news api, we've set the default to en (English)
 enum Language {
-    ar = "ar",
-    de = "de",
-    en = "en",
-    es = "es",
-    fr = "fr",
-    he = "he",
-    it = "it",
-    nl = "nl",
-    no = "no",
-    pt = "pt",
-    ru = "ru",
-    se = "se",
-    ud = "ud",
-    zh = "zh"
+    ARABIC = "ar",
+    GERMAN = "de",
+    ENGLISH = "en",
+    SPANISH = "es",
+    FRENCH = "fr",
+    HEBREW = "he",
+    ITALIAN = "it",
+    DUTCH = "nl",
+    NORWEGIAN = "no",
+    PORTUGUESE = "pt",
+    RUSSIAN = "ru",
+    NORTHERN_SAMI = "se", 
+    CHINESE = "zh",
+    ud = "ud" // this was provided in the documentation, but there is no definition for it under ISO-639-1 (also appears to return nothing?) 
 }
 
 // the possible options which we can sort by, default: publishedAt
@@ -92,12 +92,14 @@ export interface ResponseData {
 
 // the news api class which is currently being used a namespace for all of our important functions / variable types
 export class NewsApi {
-    protected static Endpoints = Endpoints; // the possible endpoints instead of import {EndPoint} from 'newsapi' we can use NewsApi.Endpoints.EVERYTHING or NewsApi.Endpoints.TOP_HEADLINES
+    static readonly Endpoints = Endpoints; // the possible endpoints instead of import {EndPoint} from 'newsapi' we can use NewsApi.Endpoints.EVERYTHING or NewsApi.Endpoints.TOP_HEADLINES
+    static readonly Languages = Language;
+
     // the default configuration which will be merged later on when making a request to fill in defaults like sortBy and language.
-    protected static defaultConfiguration : requestConfig = {
+    static readonly defaultConfiguration : requestConfig = {
         q: "", // consider this is required by default there should be no reason that the query should be blank.
         endpoint : Endpoints.EVERYTHING, // setting the default endpoint to everything 
-        language : Language.en, // setting the default language to english as it's commonly used.
+        language : Language.ENGLISH, // setting the default language to english as it's commonly used.
         sortBy: SortBy.publishedAt, // setting the default to publishedAt so we get the newest articles first.
         pageSize: 100, // default page size is 100 stated by the api.
         page: 1, // default page number
@@ -131,6 +133,5 @@ export class NewsApi {
     }
 
 }
-
 
 export default NewsApi;
