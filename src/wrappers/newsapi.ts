@@ -90,11 +90,42 @@ export interface ResponseData {
     message?: string // the error message (if there is an error)
 }
 
+enum Error {
+    API_KEY_MISSING = 'API_KEY MISSING',
+    PAGE_SIZE_UNDEFINED = 'pageSize undefined',
+    PAGE_SIZE_OUT_OF_BOUNDS = 'pageSize out of bounds'
+}
+
+function isValidRequestConfig(config: Partial<requestConfig>, reject: (reason?: any) => void) {
+
+    // checking if there is a api key, otherwise we cannot continue.
+    if(!config.apiKey) {
+        reject(NewsApi.Error.API_KEY_MISSING);
+    }
+
+    // checking if the pageSize was passed a property (as it should be defined by default)
+    if(config.pageSize) {
+        // if the pagesize is < 1 or > 100 it's out of bounds. Reject the current promise.
+        if(config.pageSize < 1 || config.pageSize > 100) {
+            reject(NewsApi.Error.PAGE_SIZE_OUT_OF_BOUNDS);
+        }
+    } else {
+        // there should be a pageSize by default
+        reject(NewsApi.Error.PAGE_SIZE_UNDEFINED);
+    }
+
+    // check date formatting
+    // to 
+    // from
+    // This should be in ISO 8601 format (e.g. 2021-07-20 or 2021-07-20T15:40:24) 
+
+}
+
 // the news api class which is currently being used a namespace for all of our important functions / variable types
 export class NewsApi {
     static readonly Endpoints = Endpoints; // the possible endpoints instead of import {EndPoint} from 'newsapi' we can use NewsApi.Endpoints.EVERYTHING or NewsApi.Endpoints.TOP_HEADLINES
-    static readonly Languages = Language;
-
+    static readonly Languages = Language; // the possible languages you can selected from 
+    static readonly Error = Error; // the possible error messages that might be displayed.
     // the default configuration which will be merged later on when making a request to fill in defaults like sortBy and language.
     static readonly defaultConfiguration : requestConfig = {
         q: "", // consider this is required by default there should be no reason that the query should be blank.
@@ -108,8 +139,12 @@ export class NewsApi {
 
     // a static function which you could call a request factory that generates Promise<Response> from the data provided by the developer or user.
     static async makeRequest(config?: requestConfig) : Promise<Response> {
+        return await new Promise((resolve, reject) => {
         // creating a partial request config, as we're not guranteed to have all the keys from the request config.
         const request : Partial<requestConfig> = {...NewsApi.defaultConfiguration, ...config}; // merging the default config and the config provided to create a new request config
+        
+        // checking that the config is valid.
+        isValidRequestConfig(request, reject);
 
         // creating a fetchURL string which will be built up over time from the records passed by the user (key, value);
         let fetchURL = `https://newsapi.org/v2/${request.endpoint}?`;
@@ -129,7 +164,10 @@ export class NewsApi {
 
         });
         // returning a promise back to whatever called it.
-        return await fetch(fetchURL);
+        // return await fetch(fetchURL);
+
+        resolve(fetch(fetchURL));
+    });
     }
 
 }
