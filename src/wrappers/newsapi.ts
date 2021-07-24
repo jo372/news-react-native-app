@@ -63,14 +63,14 @@ export interface Article {
 }
 
 // the request config
-export interface requestConfig {
+export interface RequestConfig {
     endpoint?: Endpoints, // the possible endpoints we can pick from either EndPoint.EVERYTHING | EndPoint.TOP_HEADLINES
     q: string, // the query you want to search for e.g. technology
     qInTitle?: string, // keywords or phrases to search for in the article title only.
     domains?: Domains, // either a string or array of strings this will be used to filter out domains.
     excludeDomains?: Domains, // either a string or array of string that will be used to exclude domains
-    from?: Date, // A date and optional time for the oldest article allowed. This should be in ISO 8601 format (e.g. 2021-07-19 or 2021-07-19T03:41:00) 
-    to?: Date, // A date and optional time for the newest article allowed. This should be in ISO 8601 format (e.g. 2021-07-19 or 2021-07-19T03:41:00) 
+    from?: Date | string, // A date and optional time for the oldest article allowed. This should be in ISO 8601 format (e.g. 2021-07-19 or 2021-07-19T03:41:00) 
+    to?: Date | string, // A date and optional time for the newest article allowed. This should be in ISO 8601 format (e.g. 2021-07-19 or 2021-07-19T03:41:00) 
     language?: Language, // The 2-letter ISO-639-1 code of the language you want to get headlines for. Possible options: ar de en es fr he it nl no pt ru se ud zh. 
     sortBy?: SortBy, // The order to sort the articles in. Possible options: relevancy, popularity, publishedAt
     pageSize?: number, // The number of results to return per page. Default: 100. Maximum: 100.
@@ -79,7 +79,7 @@ export interface requestConfig {
 }
 
 // possible response status's either 'ok' or 'error'. Error will return a code and a message (hence why it's optional in the response data type)
-export type ResponseStatus = 'ok' | 'error';
+type ResponseStatus = 'ok' | 'error';
 
 // the response data that you can get back, totalResult. Status. articles. code and message if there's an error.
 export interface ResponseData {
@@ -93,11 +93,22 @@ export interface ResponseData {
 enum Error {
     API_KEY_MISSING = 'API_KEY MISSING',
     PAGE_SIZE_UNDEFINED = 'pageSize undefined',
-    PAGE_SIZE_OUT_OF_BOUNDS = 'pageSize out of bounds'
+    PAGE_SIZE_OUT_OF_BOUNDS = 'pageSize out of bounds',
+    INVALID_DATE_FORMAT = 'Invalid Date format provided. Please make sure it uses the ISO 8601 format (e.g. 2021-07-20 or 2021-07-20T15:40:24)'
 }
 
-function isValidRequestConfig(config: Partial<requestConfig>, reject: (reason?: any) => void) {
+const DateRegex : RegExp = new RegExp("^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(.[0-9]+)?(Z)?$");
 
+function convertDateStringToDateObj(date: Date | string) : Date {
+    return typeof date === "string" ? new Date(date) : date;
+}
+
+function isValidDate(date: Date | string) : boolean {
+    const dateObj = convertDateStringToDateObj(date);
+    return DateRegex.test(dateObj.toISOString());
+}
+
+function isValidRequestConfig(config: Partial<RequestConfig>, reject: (reason?: any) => void) {
     // checking if there is a api key, otherwise we cannot continue.
     if(!config.apiKey) {
         reject(NewsApi.Error.API_KEY_MISSING);
@@ -114,11 +125,19 @@ function isValidRequestConfig(config: Partial<requestConfig>, reject: (reason?: 
         reject(NewsApi.Error.PAGE_SIZE_UNDEFINED);
     }
 
-    // check date formatting
-    // to 
-    // from
-    // This should be in ISO 8601 format (e.g. 2021-07-20 or 2021-07-20T15:40:24) 
+    // checking ISO 8601 format (e.g. 2021-07-20 or 2021-07-20T15:40:24) 
+    if(config.to) {
+        if(!isValidDate(config.to)) {
+            // TODO: debug 
+            reject(NewsApi.Error.INVALID_DATE_FORMAT);
+        }
+    }
 
+    if(config.from) {
+        if(!isValidDate(config.from)) {
+            reject(NewsApi.Error.INVALID_DATE_FORMAT);
+        }
+    }
 }
 
 // the news api class which is currently being used a namespace for all of our important functions / variable types
@@ -127,7 +146,7 @@ export class NewsApi {
     static readonly Languages = Language; // the possible languages you can selected from 
     static readonly Error = Error; // the possible error messages that might be displayed.
     // the default configuration which will be merged later on when making a request to fill in defaults like sortBy and language.
-    static readonly defaultConfiguration : requestConfig = {
+    static readonly defaultConfiguration : RequestConfig = {
         q: "", // consider this is required by default there should be no reason that the query should be blank.
         endpoint : Endpoints.EVERYTHING, // setting the default endpoint to everything 
         language : Language.ENGLISH, // setting the default language to english as it's commonly used.
@@ -138,10 +157,10 @@ export class NewsApi {
     }
 
     // a static function which you could call a request factory that generates Promise<Response> from the data provided by the developer or user.
-    static async makeRequest(config?: requestConfig) : Promise<Response> {
+    static async makeRequest(config?: RequestConfig) : Promise<Response> {
         return await new Promise((resolve, reject) => {
         // creating a partial request config, as we're not guranteed to have all the keys from the request config.
-        const request : Partial<requestConfig> = {...NewsApi.defaultConfiguration, ...config}; // merging the default config and the config provided to create a new request config
+        const request : Partial<RequestConfig> = {...NewsApi.defaultConfiguration, ...config}; // merging the default config and the config provided to create a new request config
         
         // checking that the config is valid.
         isValidRequestConfig(request, reject);
@@ -151,6 +170,16 @@ export class NewsApi {
 
         // removing the endpoint from the request as it's already been used and will no longer be needed.
         delete request.endpoint;
+
+        if(request.to) {
+            request.to = convertDateStringToDateObj(request.to);
+            request.to = request.to.toISOString().substring(0,10);
+        }
+
+        if(request.from) {
+            request.from = convertDateStringToDateObj(request.from);
+            request.from = request.from.toISOString().substring(0,10);
+        }
 
         // looping through the entries in the request
         Object.entries(request).forEach((object, index:number) => {
