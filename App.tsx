@@ -15,16 +15,22 @@ export default function App() {
     }).then(response => {
       response.json().then((data : ResponseData) => {
           const articles = data.articles.map((data: Article, index: number) =>
-            <View key={index}>
+            <View key={index} style={{
+              alignItems : 'center'
+            }}>
               <Image style={{
                 height: 250,
                 width: 250
               }} source={{
                 uri: data.urlToImage
               }}/>
-              <Text>{data.title}</Text>
-              <Text>{data.content}</Text>
-              <Text>{data.author}</Text>
+              <View style={{
+                alignItems: 'flex-start'
+              }}>
+                <Text>{data.title}</Text>
+                <Text>{data.content}</Text>
+                <Text>{data.author}</Text>
+              </View>
             </View>
           );
 
