@@ -99,13 +99,16 @@ enum Error {
 
 const DateRegex : RegExp = new RegExp("^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(.[0-9]+)?(Z)?$");
 
-function convertDateStringToDateObj(date: Date | string) : Date {
+function convertDateToDateObj(date: Date | string) : Date {
     return typeof date === "string" ? new Date(date) : date;
 }
 
+function convertDateToISOString(date: Date | string) : string {
+    return convertDateToDateObj(date).toISOString().substr(0, 10);
+}
+
 function isValidDate(date: Date | string) : boolean {
-    const dateObj = convertDateStringToDateObj(date);
-    return DateRegex.test(dateObj.toISOString());
+    return DateRegex.test(convertDateToDateObj(date).toISOString());
 }
 
 function isValidRequestConfig(config: Partial<RequestConfig>, reject: (reason?: any) => void) {
@@ -170,15 +173,14 @@ export class NewsApi {
 
         // removing the endpoint from the request as it's already been used and will no longer be needed.
         delete request.endpoint;
+        
 
         if(request.to) {
-            request.to = convertDateStringToDateObj(request.to);
-            request.to = request.to.toISOString().substring(0,10);
+            request.to = convertDateToISOString(request.to);
         }
 
         if(request.from) {
-            request.from = convertDateStringToDateObj(request.from);
-            request.from = request.from.toISOString().substring(0,10);
+            request.from = convertDateToISOString(request.from);
         }
 
         // looping through the entries in the request
